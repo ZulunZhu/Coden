@@ -24,8 +24,8 @@ python setup.py build_ext --inplace
 ```
 
 ## Running the code
-- On OGB and Patent datasets
+- On tmall and Patent datasets
 ```
-./all.sh
+./run.sh
 ```
 
