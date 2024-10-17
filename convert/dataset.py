@@ -82,6 +82,7 @@ class Dataset:
         self.train_nodes = train_nodes
         self.val_nodes = val_nodes
         self.test_nodes = test_nodes
+        
 
     def split_edges(
         self,
@@ -144,18 +145,24 @@ class Dataset:
 
 
 class DBLP(Dataset):
-    def __init__(self, root="./data", normalize=True):
+    def __init__(self, root=root_folder, normalize=True):
         super().__init__(name='dblp', root=root)
         edges_evolve, self.num_nodes = self._read_graph()
         x = self._read_feature()
         y = self._read_label()
 
-        if x is not None:
-            if normalize:
-                x = standard_normalization(x)
-            self.num_features = x.shape[-1]
-            self.x = torch.FloatTensor(x)
-
+        #save feat 1 
+        feat=x[-1]
+        feat=np.array(feat,dtype=np.float64)
+        print("feat", feat)
+        scaler = sklearn.preprocessing.StandardScaler()
+        scaler.fit(feat)
+        feat = scaler.transform(feat)
+        print("feat.shape:", feat.shape)
+        print("type(features):", type(feat),feat.dtype)
+        print("python features[357][37]",feat[357][37])
+        np.save(root_folder+'/data/dblp/dblp_feat.npy',feat)
+        
         self.num_classes = y.max() + 1
 
         edges = [edges_evolve[0]]
@@ -163,34 +170,38 @@ class DBLP(Dataset):
             e_last = edges[-1]
             edges.append(np.hstack([e_last, e_now]))
 
-        self.adj = [edges_to_adj(edge, num_nodes=self.num_nodes) for edge in edges]
-        self.adj_evolve = [edges_to_adj(edge, num_nodes=self.num_nodes) for edge in edges_evolve]
+        # self.adj = [edges_to_adj(edge, num_nodes=self.num_nodes) for edge in edges]
+        # self.adj_evolve = [edges_to_adj(edge, num_nodes=self.num_nodes) for edge in edges_evolve]
         self.edges = [torch.LongTensor(edge) for edge in edges]
-        self.edges_evolve = edges_evolve  # list of np.ndarray, the edges in each timestamp exist separately
+
+        self.edge_index = [torch.LongTensor(edge) for edge in edges_evolve]  # list of np.ndarray, the edges in each timestamp exist separately
 
         self.y = torch.LongTensor(y)
 
     def _read_graph(self):
-        filename = osp.join(self.root, self.name, f"{self.name}.txt")
+        filename = osp.join(self.root+"/dataset/", self.name, f"{self.name}.txt")
         d = defaultdict(list)
         N = 0
+        edge_number = 0 
         with open(filename) as f:
             for line in f:
                 x, y, t = line.strip().split()
-                x, y = int(x), int(y)
-                d[t].append((x, y))
+                x, y, t = int(x), int(y), float(t)
+                d[t].append((x, y, t))
                 N = max(N, x)
                 N = max(N, y)
+                edge_number+=1
         N += 1
         edges = []
+        print("Overall edge number", edge_number)
         for time in sorted(d):
-            row, col = zip(*d[time])
-            edge_now = np.vstack([row, col])
+            row, col, t = zip(*d[time])    
+            edge_now = np.vstack([row, col, t])
             edges.append(edge_now)
         return edges, N
 
     def _read_label(self):
-        filename = osp.join(self.root, self.name, "node2label.txt")
+        filename = osp.join(self.root+"/dataset/", self.name, "node2label.txt")
         nodes = []
         labels = []
         with open(filename) as f:
@@ -220,14 +231,26 @@ def merge(edges, step=1):
     print(f'Edges has been merged from {len(edges)} timestamps to {len(out)} timestamps')
     return out
 
-
 class Tmall(Dataset):
     def __init__(self, root=root_folder, normalize=True):
         super().__init__(name='tmall', root=root)
         edges_evolve, self.num_nodes = self._read_graph()
         x = self._read_feature()
-
+        print("self.edges_evolve[0].shape", edges_evolve[0].shape)
+        
         y, labeled_nodes = self._read_label()
+        #save feat 1 
+        feat=x[-1]
+        feat=np.array(feat,dtype=np.float64)
+        print("feat", feat)
+        scaler = sklearn.preprocessing.StandardScaler()
+        scaler.fit(feat)
+        feat = scaler.transform(feat)
+        print("feat.shape:", feat.shape)
+        print("type(features):", type(feat),feat.dtype)
+        print("python features[357][37]",feat[357][37])
+        np.save(root_folder+'/data/tmall/tmall_feat.npy',feat)
+
         # reindexing
         others = set(range(self.num_nodes)) - set(labeled_nodes.tolist())
         new_index = np.hstack([labeled_nodes, list(others)])
@@ -236,8 +259,9 @@ class Tmall(Dataset):
         mapping = np.vectorize(mapping_dict.get)(whole_nodes)
         edges_evolve = [mapping[e] for e in edges_evolve]
 
-        edges_evolve = merge(edges_evolve, step=len(edges_evolve))
+        edges_evolve = merge(edges_evolve, step=10)
 
+        
         if x is not None:
             if normalize:
                 x = standard_normalization(x)
@@ -251,12 +275,12 @@ class Tmall(Dataset):
             e_last = edges[-1]
             edges.append(np.hstack([e_last, e_now]))
 
-        self.adj = [edges_to_adj(edge, num_nodes=self.num_nodes) for edge in edges]
-        self.adj_evolve = [edges_to_adj(edge, num_nodes=self.num_nodes) for edge in edges_evolve]
+        # self.adj = [edges_to_adj(edge, num_nodes=self.num_nodes) for edge in edges]
+        # self.adj_evolve = [edges_to_adj(edge, num_nodes=self.num_nodes) for edge in edges_evolve]
         self.edges = [torch.LongTensor(edge) for edge in edges]
-        self.edge_index = edges_evolve  # list of np.ndarray, the edges in each timestamp exist separately
-
-        self.mapping = mapping
+        # self.edges_evolve = edges_evolve  # list of np.ndarray, the edges in each timestamp exist separately
+        self.edge_index = [torch.LongTensor(edge) for edge in edges_evolve]  # list of np.ndarray, the edges in each timestamp exist separately
+        # self.mapping = mapping
         self.y = torch.LongTensor(y)
 
     def _read_graph(self):
@@ -290,7 +314,9 @@ class Tmall(Dataset):
 
         labeled_nodes = np.array(nodes)
         labels = LabelEncoder().fit_transform(labels)
+        
         return labels, labeled_nodes
+    
 
 
 class Patent(Dataset):
@@ -547,7 +573,7 @@ class reddit(Dataset):
         x = self._read_feature()
 
         #save feat 1 
-        feat=x[1:,]
+        feat=x['feature']
         feat=np.array(feat,dtype=np.float64)
         print("feat", feat)
         scaler = sklearn.preprocessing.StandardScaler()
@@ -557,36 +583,38 @@ class reddit(Dataset):
         print("type(features):", type(feat),feat.dtype)
         
         np.save(root_folder+'/data/reddit/reddit_feat.npy',feat)
-        
+        y = x['label']
 
+        filename = osp.join(self.root+"/dataset/", self.name, "reddit_graph.npz")
+        graph_df = np.load(filename)
 
-        graph_df = pd.read_csv(root_folder+'/dataset/reddit/reddit.csv')
-        y = graph_df.label.values
-        sources = graph_df.u.values
-        destinations = graph_df.i.values
-        print("sources", sources)
-        print("np.sum(y)", np.sum(y))
+        self.sources = torch.LongTensor(graph_df['row'])
+        self.destinations = torch.LongTensor(graph_df['col'])
+        self.edge_index = []
+        self.edge_index.append(self.sources)
+        self.edge_index.append(self.destinations)
+        row, col = self.edge_index
+
         
-        if x is not None:
+        if feat is not None:
             if normalize:
-                x = standard_normalization(x)
-            self.num_features = x.shape[-1]
+                feat = standard_normalization(feat)
+            self.num_features = feat.shape[-1]
             # self.x = torch.FloatTensor(x)
 
         self.num_nodes = y.size
-        self.num_features = x.shape[-1]
+        self.num_features = feat.shape[-1]
         self.num_classes = y.max() + 1
-        edges_evolve = []
-
-        edges_evolve.append(sources)
-        edges_evolve.append(destinations)
-        self.edge_index = edges_evolve  # list of np.ndarray, the edges in each timestamp exist separately
-        print(self.edge_index)
+        # list of np.ndarray, the edges in each timestamp exist separately
+        # edges_evolve.append(time_stamps)
+        # self.edge_with_ts = edges_evolve
+        # print(self.edge_with_ts)
+        
         # self.x = torch.FloatTensor(x)
         self.y = torch.LongTensor(y)
 
     def _read_feature(self):
-        filename = osp.join(self.root+"/dataset/", self.name, "reddit.npy")
+        filename = osp.join(self.root+"/dataset/", self.name, "reddit_data.npz")
         print(filename)
         if osp.exists(filename):
             print("exist feature!")
@@ -595,30 +623,3 @@ class reddit(Dataset):
             print("no feature!")
             return None
         
-    def _read_graph(self):
-        filename = osp.join(self.root, self.name, f"reddit.csv")
-        time_edges = defaultdict(list)
-        with open(filename) as f:
-            for line in tqdm(f, desc='loading patent_edges'):
-                # src nodeID, dst nodeID, date, src originalID, dst originalID
-                src, dst, date, _, _ = eval(line)
-                date = date // 1e4
-                time_edges[date].append((src, dst))
-                time_edges[date].append((dst, src))
-
-        edges = []
-        for time in sorted(time_edges):
-            edges.append(np.transpose(time_edges[time]))
-        return edges
-
-    def _read_label(self):
-        filename = osp.join(self.root, self.name, f"{self.name}_nodes.json")
-        labels = []
-        with open(filename) as f:
-            for line in tqdm(f, desc='loading patent_nodes'):
-                # nodeID, originalID, date, node class
-                node, _, date, label = eval(line)
-                date = date // 1e4
-                labels.append(label - 1)
-        labels = np.array(labels)
-        return labels

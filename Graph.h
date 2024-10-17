@@ -16,8 +16,10 @@
 #include "BasicDefinition.h"
 #include "HelperFunctions.h"
 #include <boost/random.hpp>
+
 using namespace std;
 const double ALPHA_DEFAULT = 0.2;
+
 class Graph
 {
 
@@ -182,6 +184,11 @@ public:
             }
         }
     }
+    template <typename T>
+    bool isInteger(T value) {
+        return std::is_integral<T>::value;
+    }
+
 	void inputGraph_fromedgelist(string path, string dataset, uint nodenum ,uint edgenum)
 	{
 		
@@ -215,8 +222,15 @@ public:
 		//read graph and get degree info
 		uint from;
 		uint to;
-		while(infile>>from>>to)
-		{
+        double time;
+        // while(infile>>from>>to)
+		while(infile>>from>>to>>time)
+		{   
+            // if(!isInteger(from)||!isInteger(to)){
+            //     cout<<"error time stamps"<<endl;
+            //     exit(0);
+            // }
+            // cout<< "from "<<from<<" to "<<to<<" time "<<time<<endl;
 			outdegree[from]++;
 			indegree[to]++;
 		}

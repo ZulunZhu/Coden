@@ -31,9 +31,10 @@ namespace propagation{
         
     public:
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-        int NUMTHREAD=60;//Number of threads
+        int NUMTHREAD=40;//Number of threads
         uint edges, vert;
         Graph g;
+        Graph g_copy;
         Eigen::MatrixXd X;
         SpeedPPR ppr;
         vector<vector<double>> R;
@@ -48,17 +49,22 @@ namespace propagation{
         string updateFile;
         vector<double>rowsum_pos;
         vector<double>rowsum_neg;
+        vector<double>R_sum_pos;
+        vector<double>R_sum_neg;
+        vector<double>R_max_pos;
+        vector<double>R_max_neg;
         vector<int>random_w;
         vector<int>update_w;
         vector<double>Du;
         Config config;
         int dimension;
         double initial_operation(string path, string dataset,uint mm,uint nn,double rmaxx,double rbmax, double delta, double alphaa,double epsilonn,Eigen::Map<Eigen::MatrixXd> &feat, string algorithm);
-        void ppr_push(int dimension, Eigen::Ref<Eigen::MatrixXd>feat, bool init,vector<queue<uint>>& candidate_sets,vector<vector<bool>>& isCandidates, bool log, string algorithm, bool reverse);
+        void ppr_push(int dimension, Eigen::Ref<Eigen::MatrixXd>feat, bool init,vector<queue<uint>>& candidate_sets,vector<vector<bool>>& isCandidates, bool log, string algorithm, bool reverse, Eigen::Map<Eigen::MatrixXd> &change_node_list);
         void ppr_residue(Eigen::Ref<Eigen::MatrixXd>feats,int st,int ed, bool init,vector<queue<uint>>& candidate_sets,vector<vector<bool>>& isCandidates, string algorithm, bool reverse);
         void snapshot_operation(string updatefilename, double rmaxx,double alphaa, Eigen::Map<Eigen::MatrixXd> &feat, string algorithm);
-        void snapshot_lazy(string updatefilename, double rmaxx,double rbmax, double delta,double alphaa, Eigen::Map<Eigen::MatrixXd> &feat, Eigen::Map<Eigen::MatrixXd> &feat_p, Eigen::Map<Eigen::MatrixXd> &change_node_list, string algorithm);
+        void snapshot_lazy(string updatefilename, double rmaxx,double rbmax, double delta,double alphaa, Eigen::Map<Eigen::MatrixXd> &feat, Eigen::Map<Eigen::MatrixXd> &change_node_list, string algorithm);
         vector<vector<uint>> update_graph(string updatefilename, vector<uint>&affected_nodelst, vector<vector<uint>>&delete_neighbors);
+        void split_batch(string updatefilename, double epsilon, Eigen::Map<Eigen::MatrixXd> &x_max, double x_norm);
     };
 }
 

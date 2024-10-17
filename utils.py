@@ -8,7 +8,9 @@ import scipy
 import time
 import copy
 import pdb
-import sklearn.preprocessing
+import sklearn
+from sklearn import preprocessing
+root_folder = "/home/ubuntu/project"
 def add_log(pth, log):
   time_now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
   with open(pth, "a+") as f:
@@ -43,6 +45,11 @@ def load_aminer_init(datastr, rmax, alpha):
     test_labels = test_labels.reshape(test_labels.size(0), 1)
     
     return features, train_labels, val_labels, test_labels, train_idx, val_idx, test_idx, memory_dataset, py_alg
+def standard_normalization(arr):
+    n_node, n_dim = arr.shape
+    arr_norm = preprocessing.scale(np.reshape(arr, [n_node, n_dim]), axis=1)
+    arr_norm = np.reshape(arr_norm, [n_node, n_dim])
+    return arr_norm
 
 def load_ogb_init(datastr, alpha, rmax, rbmax, delta,epsilon, algorithm):
     if(datastr=="papers100M"):
@@ -58,7 +65,7 @@ def load_ogb_init(datastr, alpha, rmax, rbmax, delta,epsilon, algorithm):
     elif(datastr=="patent"):
         m=5248988; n=2738012##with self_loop
     elif(datastr=="tmall"):
-        m=5871256; n=577314##with self_loop
+        m=643488; n=577314##with self_loop
     elif(datastr=="mag"):
         # m=1158475; n= 736389##with self_loop
         m=11529061; n= 736389## full edges     
@@ -67,7 +74,9 @@ def load_ogb_init(datastr, alpha, rmax, rbmax, delta,epsilon, algorithm):
     elif(datastr=="wikipedia"):
         m=193988; n= 157474 ##with self_loop
     elif(datastr=="reddit"):
-        m=829479; n= 672447 ##with self_loop
+        m=10523297; n= 232965 ##with self_loop
+    elif(datastr=="dblp"):
+        m=29719; n= 28085 ##with self_loop    
     print("Load %s!" % datastr)
     
     py_alg = InstantGNN()
@@ -75,30 +84,38 @@ def load_ogb_init(datastr, alpha, rmax, rbmax, delta,epsilon, algorithm):
 
     features = np.load('../data/'+datastr+'/'+datastr+'_feat.npy')
     print("load the original feat....")
-    print("features::",features)
+    print("features_file::",features)
 
     # features = np.load('./data/'+datastr+'/'+datastr+'_feat_norm.npy')
     # print("load the norm feat....")
 
 
-    perm = torch.randperm(features.shape[0])
+    
 
     # features_n = copy.deepcopy(features)
+    np.save(root_folder+'/data/arxiv/arxiv_feat_0.npy',features)
 
-    features_n = features[perm]
+    features_n = np.copy(features)
+    # scaler = sklearn.preprocessing.StandardScaler()
+    # scaler.fit(features)
+    # features = scaler.transform(features)
+    # features = np.ones_like(features_n)
+    # features = standard_normalization(features)
+    
+    print("features scaled::",features)
     
     features=np.array(features,dtype=np.float64)
     features = np.ascontiguousarray(features)
     print("features.shape",features.shape)
     print("type(features):", type(features),features.dtype)
-    print("python features[357[37]",features[357][37])
+    print("python features[357[37]",features[357][3])
     memory_dataset = py_alg.initial_operation('../data/'+datastr+'/', datastr+'_init', m, n, rmax, rbmax, delta, alpha, epsilon,features, algorithm)
     # memory_dataset_n = py_alg.initial_operation('../data/'+datastr+'/', datastr+'_init', m, n, rmax, alpha, epsilon,features_n, algorithm)
     # scaler = sklearn.preprocessing.StandardScaler()
     # scaler.fit(features)
     # features = scaler.transform(features)
-  
-
+    
+    # features = features_n
     data = np.load('../data/'+datastr+'/'+datastr+'_labels.npz')
     train_idx = torch.LongTensor(data['train_idx'])
     val_idx = torch.LongTensor(data['val_idx'])
@@ -113,11 +130,11 @@ def load_ogb_init(datastr, alpha, rmax, rbmax, delta,epsilon, algorithm):
     val_labels=val_labels.reshape(val_labels.size(0),1)
     test_labels=test_labels.reshape(test_labels.size(0),1)
 
-    labels = torch.randperm(features.shape[0]).unsqueeze(1)
-    if (datastr=="mooc"):
-        labels = torch.LongTensor(data['all_labels'])
-        labels=labels.reshape(labels.size(0),1)
-    return n,m,features,features_n,train_labels,val_labels,test_labels,labels, train_idx,val_idx,test_idx,memory_dataset, py_alg
+    # features = features_n
+    # if (datastr=="mooc"):
+    #     labels = torch.LongTensor(data['all_labels'])
+    #     labels=labels.reshape(labels.size(0),1)
+    return n,m,features,features_n,train_labels,val_labels,test_labels, train_idx,val_idx,test_idx,memory_dataset, py_alg
 
 def load_sbm_init(datastr, rmax, alpha):
     if datastr == "SBM-50000-50-20+1":
@@ -178,6 +195,7 @@ class ExtendDataset(Dataset):
     def __init__(self,x,y):
         self.x=x
         self.y=y
+        # assert self.x.size(0)==self.y.size(0)
 
     def __len__(self):
         return self.x.size(0)
