@@ -1,4 +1,4 @@
-# Topology-aware Graph Contrastive Learning on Dynamic Graphs
+
 
 ## Requirements
 - CUDA 10.1
@@ -12,9 +12,6 @@
 - tqdm 4.56.0
 - ogb 1.2.4
 - [eigen 3.3.9] (https://gitlab.com/libeigen/eigen.git)
-
-## Datasets
-OGB Datasets can be downloaded from [here](https://ogb.stanford.edu). The website 'Open Graph Benchmark' provides an automatic method to download and convert the three datasets. So you can straightly run 'python convert_ogb.py' instead of downloading these datasets manually. We drop several edges to simulate the graphs' evolving nature. In the folder './convert/', we provide the codes to convert the three datasets.
 
 
 ## Compilation
